@@ -4,7 +4,7 @@
 import sys
 import psycopg2
 import re
-from helpers import get_student_info
+from helpers import get_latest_student_info
 
 argc = len(sys.argv)
 if argc < 2:
@@ -24,7 +24,7 @@ conn = psycopg2.connect("dbname=ass2")
 curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
 
 try:
-    stu_info = get_student_info(conn, zid)
+    stu_info = get_latest_student_info(conn, zid)
     if not stu_info:
         print(f"Invalid student ID {zid}")
         exit(1)

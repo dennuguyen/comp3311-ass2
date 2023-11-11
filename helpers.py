@@ -18,7 +18,7 @@ def get_stream_info(conn, code):
     curs.close()
     return info or None
 
-def get_student_info(conn, zid):
+def get_latest_student_info(conn, zid):
     curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
     curs.execute(
         f"""
