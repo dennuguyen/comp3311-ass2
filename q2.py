@@ -16,18 +16,48 @@ if not re.compile("^[A-Z]{4}[0-9]{4}$").match(subject):
     print("Invalid subject code")
     exit(1)
 
-code = None
-def row():
-  return f"{code} {satisfaction:6d} {num_responses:6d} {num_students:6d}  {convenor}"
+conn = psycopg2.connect("dbname=ass2")
+curs = conn.cursor()
 
-with psycopg2.connect("dbname=ass2") as conn:
-    with conn.cursor() as curs:
-        subjectInfo = getSubject(conn, subject)
-        if not subjectInfo:
-            print(f"Invalid subject code {code}")
-            exit(1)
-        #print(subjectInfo)  #debug
+try:
+    # Get subject information
+    curs.execute(f"""select code, title from subjects where code = '{subject}'""")
+    code, title = curs.fetchone()
+    print(code, title)
 
-        # List satisfaction for subject over time
+    # Get satisfaction rate, number of responses, and number of students for each course
+    curs.execute(
+        f"""
+        select
+            terms.code as term,
+            courses.satisfact as satisfaction,
+            courses.nresponses as nresponses,
+            count(students) as nstudents,
+            people.full_name as convenor
+        from course_enrolments
+        full join students on students.id = course_enrolments.student
+        full join courses on courses.id = course_enrolments.course
+        full join subjects on subjects.id = courses.subject
+        full join terms on terms.id = courses.term
+        full join staff on staff.id = courses.convenor
+        full join people on people.id = staff.id
+        where subjects.code = '{subject}'
+        group by
+            terms.code,
+            courses.satisfact,
+            courses.nresponses,
+            people.full_name
+        """
+    )
 
-        # ... add your code here ...
+    print("Term  Satis  #resp   #stu  Convenor")
+    for [code, satisfaction, nresponses, nstudents, convenor] in curs.fetchall():
+        print(f"{code} {satisfaction or '?':>6} {nresponses or '?':>6} {nstudents:>6}  {convenor}")
+
+except Exception as err:
+    print(err)
+finally:
+    if curs:
+        curs.close()
+    if conn:
+        conn.close()
