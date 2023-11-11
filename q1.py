@@ -12,9 +12,9 @@ try:
     curs.execute(
         """
         with student_enrolments as (
-            select distinct on (program_enrolments.term, program_enrolments.student)
-            terms.code as term,
-            students.status as status
+            select distinct on (terms.id, students.id)
+                terms.code as term,
+                students.status as status
             from terms
             inner join program_enrolments on program_enrolments.term = terms.id
             inner join students on students.id = program_enrolments.student
@@ -49,7 +49,7 @@ try:
 
     # Print very last row
     print(row())
-except err:
+except Exception as err:
     print(err)
 finally:
     if curs:
