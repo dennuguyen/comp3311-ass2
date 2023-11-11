@@ -32,7 +32,7 @@ with psycopg2.connect("dbname=ass2") as conn:
         def row():
             return f"{prev_term} {num_locals:6d} {num_intls:6d} {(num_locals / num_intls if num_intls else 0):6.1f}"
 
-        for [term, status] in cur.fetchall():
+        for [term, status] in curs.fetchall():
             if status == "INTL":
                 num_intls += 1
             else:
