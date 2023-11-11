@@ -35,12 +35,12 @@ try:
             count(students) as nstudents,
             people.full_name as convenor
         from course_enrolments
-        full join students on students.id = course_enrolments.student
+        inner join students on students.id = course_enrolments.student
         full join courses on courses.id = course_enrolments.course
-        full join subjects on subjects.id = courses.subject
-        full join terms on terms.id = courses.term
-        full join staff on staff.id = courses.convenor
-        full join people on people.id = staff.id
+        inner join subjects on subjects.id = courses.subject
+        inner join terms on terms.id = courses.term
+        inner join staff on staff.id = courses.convenor
+        inner join people on people.id = staff.id
         where subjects.code = '{subject}'
         group by
             terms.code,
