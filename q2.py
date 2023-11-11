@@ -21,7 +21,7 @@ curs = conn.cursor()
 
 try:
     # Get subject information
-    curs.execute(f"""select code, title from subjects where code = '{subject}'""")
+    curs.execute(f"select code, title from subjects where code = '{subject}'")
     code, title = curs.fetchone()
     print(code, title)
 
