@@ -23,18 +23,17 @@ try:
         """
     )
 
-    # Print header.
-    print("Term  #Locl  #Intl Proportion")
-
     prev_term = "19T1"
     num_locals = 0
     num_intls = 0
     
     # Helper to print table rows.
     def row():
-        return f"{prev_term} {num_locals:6d} {num_intls:6d} {(num_locals / num_intls if num_intls else 0):6.1f}"
+        return (f"{prev_term} {num_locals:6d} {num_intls:6d}"
+                f"{(num_locals / num_intls if num_intls else 0):6.1f}")
 
-    for [term, status] in curs.fetchall():
+    print("Term  #Locl  #Intl Proportion")
+    for term, status in curs.fetchall():
         if status == "INTL":
             num_intls += 1
         else:
@@ -49,6 +48,7 @@ try:
 
     # Print very last row
     print(row())
+
 except Exception as err:
     print(err)
 finally:
