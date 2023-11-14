@@ -18,18 +18,20 @@ def min_max_to_str(min_req, max_req):
     return ""  # min_req and max_req are null
 
 def string_to_list(conn, string, query):
+    output = ""
     curs = conn.cursor()
     array = string.split(",")
     for item in array:
         subitems = item.replace("{", "").replace("}", "").split(";")
         for i, subitem in enumerate(subitems):
-            curs.execute(query + f"'{subitem}'")
+            curs.execute(query, [subitem])
             name = curs.fetchone()[0]
             if i > 0:
-                print(f"  or {subitem} {name}")
+                output += f"  or {subitem} {name}\n"
             else:
-                print(f"- {subitem} {name}")
+                output += f"- {subitem} {name}\n"
     curs.close()
+    return output
 
 argc = len(sys.argv)
 if argc < 2:
@@ -47,6 +49,13 @@ else:
 
 conn = psycopg2.connect("dbname=ass2")
 curs = conn.cursor()
+
+core_string = ""
+elective_string = ""
+free_string = ""
+gened_string = ""
+stream_string = ""
+uoc_string = ""
 
 try:
     # TODO: Make helper function to generalise this if/elif.
@@ -87,26 +96,33 @@ try:
     print("Academic Requirements:")
 
     # Iterates through each requirement type.
-    # TODO: Cache print statement strings to enforce print order requirement
     # TODO: Clean up tuple
     for _, _, _, _, rname, rtype, min_req, max_req, acadobjs, _, _ in curs.fetchall():
         if rtype == 'core':
-            print(f"all courses from {rname}")
-            string_to_list(conn, acadobjs, "select title from subjects where code = ")
+            core_string += f"all courses from {rname}\n"
+            core_string += string_to_list(conn, acadobjs, "select title from subjects where code = %s")
         elif rtype == 'elective':
-            print(f"{min_max_to_str(min_req, max_req)} UOC courses from {rname}")
-            print("- " + acadobjs)
+            elective_string += f"{min_max_to_str(min_req, max_req)} UOC courses from {rname}\n"
+            elective_string += "- " + acadobjs + "\n"
         elif rtype == 'free':
-            print(f"{min_max_to_str(min_req, max_req)} UOC of {rname}")
+            free_string += f"{min_max_to_str(min_req, max_req)} UOC of {rname}\n"
         elif rtype == 'gened':
-            print(f"{min_max_to_str(min_req, max_req)} UOC of {rname}")
+            gened_string += f"{min_max_to_str(min_req, max_req)} UOC of {rname}\n"
         elif rtype =='stream':
-            print(f"{min_max_to_str(min_req, max_req)} stream from {rname}")
-            string_to_list(conn, acadobjs, "select name from streams where code = ")
+            stream_string += f"{min_max_to_str(min_req, max_req)} stream from {rname}\n"
+            stream_string += string_to_list(conn, acadobjs, "select name from streams where code = %s")
         elif rtype == 'uoc':
-            print(f"Total UOC {min_max_to_str(min_req, max_req)} UOC")
+            uoc_string += f"Total UOC {min_max_to_str(min_req, max_req)} UOC\n"
         else:
             raise ValueError("Invalid requirement type")
+
+    # Print everything at the end in the correct order.
+    print(uoc_string)
+    print(stream_string)
+    print(core_string)
+    print(elective_string)
+    print(gened_string)
+    print(free_string)
 
 except Exception as err:
   print(err)
