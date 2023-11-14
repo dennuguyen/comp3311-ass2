@@ -68,6 +68,6 @@ def get_transcript(conn, zid):
         order by transcript.term, transcript.code
         """
     , [zid])
-    info = curs.fetchone()
+    info = curs.fetchall()
     curs.close()
     return info or None
