@@ -4,7 +4,7 @@
 import sys
 import psycopg2
 import re
-from helpers import get_latest_student_info
+from helpers import get_latest_student_info, get_transcript
 
 argc = len(sys.argv)
 if argc < 2:
@@ -21,7 +21,6 @@ if not digits.match(zid):
     exit(1)
 
 conn = psycopg2.connect("dbname=ass2")
-curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
 
 try:
     stu_info = get_latest_student_info(conn, zid)
@@ -32,34 +31,14 @@ try:
     print(f"{stu_info.zid} {stu_info.last_name}, {stu_info.first_name}")
     print(f"{stu_info.program_code} {stu_info.stream_code} {stu_info.program_name}")
 
-    curs.execute(
-        f"""
-        with transcript as (
-            select
-                subjects.code as code,
-                terms.code as term,
-                subjects.title as title,
-                course_enrolments.mark as mark,
-                course_enrolments.grade as grade,
-                subjects.uoc as uoc
-            from course_enrolments
-            inner join courses on courses.id = course_enrolments.course
-            inner join subjects on subjects.id = courses.subject
-            inner join people on people.id = course_enrolments.student
-            inner join terms on terms.id = courses.term
-            where people.id = {stu_info.id}
-        )
-        select * from transcript
-        order by transcript.term, transcript.code
-        """
-    )
+    transcript = get_transcript(conn, stu_info.zid)
 
     wam = 0
     weighted_mark_sum = 0
     attempted_uoc = 0
     achieved_uoc = 0
 
-    for result in curs.fetchall():
+    for result in transcript:
         # Assume subject UOC is unresolved.
         subject_uoc = f"{'unrs':>5}"
         
@@ -86,7 +65,5 @@ try:
 except Exception as err:
     print(err)
 finally:
-    if curs:
-        curs.close()
     if conn:
         conn.close()

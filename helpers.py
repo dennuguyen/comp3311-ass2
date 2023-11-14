@@ -6,14 +6,14 @@ import psycopg2.extras
 
 def get_program_info(conn, code):
     curs = conn.cursor()
-    curs.execute(f"select * from programs where programs.code = '{code}'")
+    curs.execute("select * from programs where programs.code = %s", [code])
     info = curs.fetchone()
     curs.close()
     return info or None
 
 def get_stream_info(conn, code):
     curs = conn.cursor()
-    curs.execute(f"select * from streams where streams.code = '{code}'")
+    curs.execute("select * from streams where streams.code = %s", [code])
     info = curs.fetchone()
     curs.close()
     return info or None
@@ -21,7 +21,7 @@ def get_stream_info(conn, code):
 def get_latest_student_info(conn, zid):
     curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
     curs.execute(
-        f"""
+        """
         select
             people.id as id,
             people.zid as zid,
@@ -37,11 +37,37 @@ def get_latest_student_info(conn, zid):
         inner join programs on programs.id = program_enrolments.program
         inner join streams on streams.id = stream_enrolments.stream
         inner join terms on terms.id = program_enrolments.term
-        where people.zid = '{zid}'
+        where people.zid = %s
         order by terms.starting desc
         """
-    )
+    , [zid])
     info = curs.fetchone()
     curs.close()
     return info or None
 
+def get_transcript(conn, zid):
+    curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
+    curs.execute(
+        """
+        with transcript as (
+            select
+                subjects.code as code,
+                terms.code as term,
+                subjects.title as title,
+                course_enrolments.mark as mark,
+                course_enrolments.grade as grade,
+                subjects.uoc as uoc
+            from course_enrolments
+            inner join courses on courses.id = course_enrolments.course
+            inner join subjects on subjects.id = courses.subject
+            inner join people on people.id = course_enrolments.student
+            inner join terms on terms.id = courses.term
+            where people.zid = %s
+        )
+        select * from transcript
+        order by transcript.term, transcript.code
+        """
+    , [zid])
+    info = curs.fetchone()
+    curs.close()
+    return info or None

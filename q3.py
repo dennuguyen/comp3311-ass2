@@ -49,42 +49,47 @@ conn = psycopg2.connect("dbname=ass2")
 curs = conn.cursor()
 
 try:
+    # TODO: Make helper function to generalise this if/elif.
     if codeOf == "program":
         program_info = get_program_info(conn, code)
         if not program_info:
             print("Invalid program code", code)
-            exit()
+            exit(1)
 
         print(program_info[1], program_info[2])
-        print("Academic Requirements:")
 
         curs.execute(
             f"""
             select * from programs
             inner join requirements on requirements.for_program = programs.id
-            where programs.code = '{code}'
+            where programs.code = %s
             """
+            , [code]
         )
 
     elif codeOf == "stream":
         stream_info = get_stream_info(conn, code)
         if not stream_info:
             print("Invalid stream code", code)
-            exit()
+            exit(1)
 
         print(stream_info[1], stream_info[2])
-        print("Academic Requirements:")
 
         curs.execute(
             f"""
             select * from streams
             inner join requirements on requirements.for_stream = streams.id
-            where streams.code = '{code}'
+            where streams.code = %s
             """
+            , [code]
         )
 
+    print("Academic Requirements:")
+
     # Iterates through each requirement type.
-    for _, code, pname, _, rname, rtype, min_req, max_req, acadobjs, stream, program in curs.fetchall():
+    # TODO: Cache print statement strings to enforce print order requirement
+    # TODO: Clean up tuple
+    for _, _, _, _, rname, rtype, min_req, max_req, acadobjs, _, _ in curs.fetchall():
         if rtype == 'core':
             print(f"all courses from {rname}")
             string_to_list(conn, acadobjs, "select title from subjects where code = ")

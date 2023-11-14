@@ -21,13 +21,13 @@ curs = conn.cursor()
 
 try:
     # Get subject information
-    curs.execute(f"select code, title from subjects where code = '{subject}'")
+    curs.execute("select code, title from subjects where code = %s", [subject])
     code, title = curs.fetchone()
     print(code, title)
 
     # Get satisfaction rate, number of responses, and number of students for each course
     curs.execute(
-        f"""
+        """
         select
             terms.code as term,
             courses.satisfact as satisfaction,
@@ -41,18 +41,20 @@ try:
         inner join terms on terms.id = courses.term
         inner join staff on staff.id = courses.convenor
         inner join people on people.id = staff.id
-        where subjects.code = '{subject}'
+        where subjects.code = %s
         group by
             terms.code,
             courses.satisfact,
             courses.nresponses,
             people.full_name
         """
+        , [subject]
     )
 
     print("Term  Satis  #resp   #stu  Convenor")
-    for [code, satisfaction, nresponses, nstudents, convenor] in curs.fetchall():
-        print(f"{code} {satisfaction or '?':>6} {nresponses or '?':>6} {nstudents:>6}  {convenor}")
+    for code, satisfaction, nresponses, nstudents, convenor in curs.fetchall():
+        print(f"{code} {satisfaction or '?':>6} {nresponses or '?':>6}"
+              f"{nstudents:>6}  {convenor}")
 
 except Exception as err:
     print(err)
