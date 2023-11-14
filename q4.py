@@ -41,7 +41,7 @@ try:
     for result in transcript:
         # Assume subject UOC is unresolved.
         subject_uoc = f"{'unrs':>5}"
-        
+
         # Grade is valid so give subject UOC a value and sum achieved UOC.
         if result.grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
             subject_uoc = f"{result.uoc:2d}uoc"
