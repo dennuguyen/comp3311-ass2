@@ -49,7 +49,7 @@ else:
     exit(1)
 
 conn = psycopg2.connect("dbname=ass2")
-curs = conn.cursor()
+curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
 
 core_string = ""
 elective_string = ""
@@ -77,33 +77,40 @@ try:
 
     curs.execute(
         """
-        select * from %ss
+        select
+            %ss.code as scode,
+            %ss.name as sname,
+            requirements.name as rname,
+            requirements.rtype as rtype,
+            requirements.min_req as min_req,
+            requirements.max_req as max_req,
+            requirements.acadobjs as acadobjs
+        from %ss
         inner join requirements on requirements.for_%s = %ss.id
         where %ss.code = %s
         """
-        , [AsIs(codeOf), AsIs(codeOf), AsIs(codeOf), AsIs(codeOf), code]
+        , [AsIs(codeOf) for i in range(6)] + [code]
     )
 
     print("Academic Requirements:")
 
     # Iterates through each requirement type.
-    # TODO: Clean up tuple
-    for _, _, _, _, rname, rtype, min_req, max_req, acadobjs, _, _ in curs.fetchall():
-        if rtype == "core":
-            core_string += f"all courses from {rname}\n"
-            core_string += string_to_list(conn, acadobjs, "select title from subjects where code = %s")
-        elif rtype == "elective":
-            elective_string += f"{min_max_to_str(min_req, max_req)} UOC courses from {rname}\n"
-            elective_string += "- " + acadobjs + "\n"
-        elif rtype == "free":
-            free_string += f"{min_max_to_str(min_req, max_req)} UOC of {rname}\n"
-        elif rtype == "gened":
-            gened_string += f"{min_max_to_str(min_req, max_req)} UOC of {rname}\n"
-        elif rtype =="stream":
-            stream_string += f"{min_max_to_str(min_req, max_req)} stream from {rname}\n"
-            stream_string += string_to_list(conn, acadobjs, "select name from streams where code = %s")
-        elif rtype == "uoc":
-            uoc_string += f"Total UOC {min_max_to_str(min_req, max_req)} UOC\n"
+    for result in curs.fetchall():
+        if result.rtype == "core":
+            core_string += f"all courses from {result.rname}\n"
+            core_string += string_to_list(conn, result.acadobjs, "select title from subjects where code = %s")
+        elif result.rtype == "elective":
+            elective_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC courses from {result.rname}\n"
+            elective_string += "- " + result.acadobjs + "\n"
+        elif result.rtype == "free":
+            free_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC of {result.rname}\n"
+        elif result.rtype == "gened":
+            gened_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC of {result.rname}\n"
+        elif result.rtype =="stream":
+            stream_string += f"{min_max_to_str(result.min_req, result.max_req)} stream from {result.rname}\n"
+            stream_string += string_to_list(conn, result.acadobjs, "select name from streams where code = %s")
+        elif result.rtype == "uoc":
+            uoc_string += f"Total UOC {min_max_to_str(result.min_req, result.max_req)} UOC\n"
         else:
             raise ValueError("Invalid requirement type")
 
