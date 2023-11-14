@@ -3,6 +3,7 @@
 
 import sys
 import psycopg2
+from psycopg2.extensions import AsIs
 import re
 from helpers import get_program_info, get_stream_info
 
@@ -58,7 +59,6 @@ stream_string = ""
 uoc_string = ""
 
 try:
-    # TODO: Make helper function to generalise this if/elif.
     if codeOf == "program":
         program_info = get_program_info(conn, code)
         if not program_info:
@@ -66,15 +66,6 @@ try:
             exit(1)
 
         print(program_info[1], program_info[2])
-
-        curs.execute(
-            f"""
-            select * from programs
-            inner join requirements on requirements.for_program = programs.id
-            where programs.code = %s
-            """
-            , [code]
-        )
 
     elif codeOf == "stream":
         stream_info = get_stream_info(conn, code)
@@ -84,34 +75,34 @@ try:
 
         print(stream_info[1], stream_info[2])
 
-        curs.execute(
-            f"""
-            select * from streams
-            inner join requirements on requirements.for_stream = streams.id
-            where streams.code = %s
-            """
-            , [code]
-        )
+    curs.execute(
+        """
+        select * from %ss
+        inner join requirements on requirements.for_%s = %ss.id
+        where %ss.code = %s
+        """
+        , [AsIs(codeOf), AsIs(codeOf), AsIs(codeOf), AsIs(codeOf), code]
+    )
 
     print("Academic Requirements:")
 
     # Iterates through each requirement type.
     # TODO: Clean up tuple
     for _, _, _, _, rname, rtype, min_req, max_req, acadobjs, _, _ in curs.fetchall():
-        if rtype == 'core':
+        if rtype == "core":
             core_string += f"all courses from {rname}\n"
             core_string += string_to_list(conn, acadobjs, "select title from subjects where code = %s")
-        elif rtype == 'elective':
+        elif rtype == "elective":
             elective_string += f"{min_max_to_str(min_req, max_req)} UOC courses from {rname}\n"
             elective_string += "- " + acadobjs + "\n"
-        elif rtype == 'free':
+        elif rtype == "free":
             free_string += f"{min_max_to_str(min_req, max_req)} UOC of {rname}\n"
-        elif rtype == 'gened':
+        elif rtype == "gened":
             gened_string += f"{min_max_to_str(min_req, max_req)} UOC of {rname}\n"
-        elif rtype =='stream':
+        elif rtype =="stream":
             stream_string += f"{min_max_to_str(min_req, max_req)} stream from {rname}\n"
             stream_string += string_to_list(conn, acadobjs, "select name from streams where code = %s")
-        elif rtype == 'uoc':
+        elif rtype == "uoc":
             uoc_string += f"Total UOC {min_max_to_str(min_req, max_req)} UOC\n"
         else:
             raise ValueError("Invalid requirement type")
