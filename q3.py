@@ -17,7 +17,7 @@ def min_max_to_str(min_req, max_req):
         return f"{min_req}"
     return ""  # min_req and max_req are null
 
-def stringify_acadobjs_list(input):
+def stringify_acadobjs(input):
     """
     Given a list of academic objects, stringifies it in the following format:
     - COMP9900 Information Technology Project
@@ -81,8 +81,8 @@ try:
     for result in requirements:
         if result.rtype == "core":
             core_string += f"all courses from {result.rname}\n"
-            acadobjs_list = get_academic_objects(conn, result.rtype, result.acadobjs)
-            core_string += stringify_acadobjs_list(acadobjs_list)
+            acadobjs = get_academic_objects(conn, result.rtype, result.acadobjs)
+            core_string += stringify_acadobjs(acadobjs)
         elif result.rtype == "elective":
             elective_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC courses from {result.rname}\n"
             elective_string += "- " + result.acadobjs + "\n"
@@ -92,8 +92,8 @@ try:
             gened_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC of {result.rname}\n"
         elif result.rtype == "stream":
             stream_string += f"{min_max_to_str(result.min_req, result.max_req)} stream from {result.rname}\n"
-            acadobjs_list = get_academic_objects(conn, result.rtype, result.acadobjs)
-            stream_string += stringify_acadobjs_list(acadobjs_list)
+            acadobjs = get_academic_objects(conn, result.rtype, result.acadobjs)
+            stream_string += stringify_acadobjs(acadobjs)
         elif result.rtype == "uoc":
             uoc_string += f"Total UOC {min_max_to_str(result.min_req, result.max_req)} UOC\n"
         else:
