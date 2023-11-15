@@ -4,7 +4,7 @@
 import sys
 import psycopg2
 import re
-from helpers import get_program, get_stream, get_requirements
+from helpers import get_program, get_stream, get_requirements, get_academic_objects
 
 def min_max_to_str(min_req, max_req):
     if min_req and not max_req:
@@ -16,31 +16,6 @@ def min_max_to_str(min_req, max_req):
     if min_req and max_req and min_req == max_req:
         return f"{min_req}"
     return ""  # min_req and max_req are null
-
-def get_academic_objects(conn, rtype, acadobjs):
-    """
-    Gets academic objects as a list.
-    """
-
-    query = ""
-    if rtype in ["core", "elective"]:
-        query = "select title as name from subjects where code = %s"
-    elif rtype == "stream":
-        query = "select name as name from streams where code = %s"
-
-    output = []
-    curs = conn.cursor()
-    for item in acadobjs.split(","):
-        subitems = item.replace("{", "").replace("}", "").split(";")
-        for i, subitem in enumerate(subitems):
-            curs.execute(query, [subitem])
-            name = curs.fetchone()[0]
-            if i > 0:
-                output[-1].append((subitem, name))
-            else:
-                output.append([(subitem, name)])
-    curs.close()
-    return output
 
 def stringify_acadobjs_list(input):
     """

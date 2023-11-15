@@ -74,6 +74,38 @@ def get_stream_requirements(conn, code):
 def get_program_requirements(conn, code):
     return get_requirements(conn, "program", code)
 
+def get_academic_objects(conn, rtype, acadobjs):
+    """
+    Gets academic objects as a list of (code, name).
+
+    The academic objects given must be retrieved directly from get_requirements.
+
+    Example usage:
+        for result in requirements:
+            if result.rtype in ["core", "stream"]:
+                acadobjs_list = get_academic_objects(conn, result.rtype, result.acadobjs)
+    """
+
+    query = ""
+    if rtype in ["core", "elective"]:
+        query = "select title as name from subjects where code = %s"
+    elif rtype == "stream":
+        query = "select name as name from streams where code = %s"
+
+    output = []
+    curs = conn.cursor()
+    for item in acadobjs.split(","):
+        subitems = item.replace("{", "").replace("}", "").split(";")
+        for i, code in enumerate(subitems):
+            curs.execute(query, [code])
+            name = curs.fetchone()[0]
+            if i > 0:
+                output[-1].append((code, name))
+            else:
+                output.append([(code, name)])
+    curs.close()
+    return output
+
 def get_transcript(conn, zid):
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute(
