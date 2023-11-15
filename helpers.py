@@ -229,6 +229,9 @@ def get_full_transcript(conn, zid):
     return (transcript, achieved_uoc, wam)
 
 def print_transcript(transcript, achieved_uoc, wam):
+    """
+    Prints a full transcript. Requires achieved UOC and WAM.
+    """
     for course in transcript:
         print(f"{course['code']} {course['term']} {course['title']:<32.31s}"
               f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  {course.get('course_uoc', '')}  {course.get('rname', '')}")
