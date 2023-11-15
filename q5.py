@@ -5,7 +5,7 @@ import sys
 import traceback
 import psycopg2
 import re
-from helpers import get_latest_student, get_program, get_stream, get_program_requirements, get_academic_objects, get_full_transcript, get_stream_requirements, stringify_acadobjs, get_subject
+from helpers import get_latest_student, get_program, get_stream, get_program_requirements, get_academic_objects, get_full_transcript, get_stream_requirements, stringify_acadobjs, get_subject, print_transcript
 
 def process_requirements(requirements):
     """
@@ -26,20 +26,38 @@ def process_requirements(requirements):
     return requirements
 
 def course_code_matcher(test, code):
+    """
+    Tests course codes against a generic code e.g.
+        COMP#### + COMP1234 => True
+        ####1#### + MATH1000 => True
+    """
     return bool(re.match(test.replace("#", "."), code))
 
-# Tick off requirements (brute force) and modify course transcript if necessary.
 def tick_off(requirements, course, rtype):
+    """
+    Ticks off all requirement types and updates course transcript if necessary.
+    This is done by brute force.
+    """
     for rname, courses in requirements.items():
 
         def cleanup():
+            """
+            Cleanup function on tick off success. Will always update total UOC and
+            attach transcript with requirement names.
+
+            This could be turned into a decorator if there was more time.
+            """
             requirements["Total UOC"]["min_req"] -= course["uoc"]
             course["rname"] = rname
             return True
 
         if courses["rtype"] == rtype and requirements["Total UOC"]["min_req"] > 0:
             acadobjs = courses["acadobjs"]
+
+            # Top level courses.
             for outer in acadobjs:
+
+                # This handles OR cases in next depth of courses.
                 for inner in outer:
                     course_code, _ = inner
                     if rtype == "core":
@@ -68,35 +86,61 @@ def tick_off(requirements, course, rtype):
     return False
 
 def tick_off_core(requirements, course):
+    """
+    Convenience function to tick off core requirements.
+    """
     return tick_off(requirements, course, "core")
 
 def tick_off_elective(requirements, course):
+    """
+    Convenience function to tick off elective requirements.
+    """
     return tick_off(requirements, course, "elective")
 
 def tick_off_gened(requirements, course):
+    """
+    Convenience function to tick off general education requirements.
+    """
     return tick_off(requirements, course, "gened")
 
 def tick_off_free(requirements, course):
+    """
+    Convenience function to tick off free elective requirements.
+    """
     return tick_off(requirements, course, "free")
 
 def check_off(requirements, rtype):
+    """
+    Checks if requirements have been met. Will print to output.
+
+    Returns a boolean on success of check or not depending on what requirement
+    type we're checking against.
+    """
     checked_off = True
     for rname, courses in requirements.items():
         if courses["rtype"] == rtype:
             if courses["rtype"] == "core":
-                sum = 0
+                sum_uoc = 0
                 output = ""
                 acadobjs = courses["acadobjs"]
+
+                # If true, academic objects is not empty and there exists courses to tick off.
                 if acadobjs:
-                    # Sum UOC of all academic objects.
+                    # Sum UOC across all academic objects.
                     for outer in acadobjs:
-                        # Only get one leaf from this level since this level represents OR.
+                        # No need for inner loop since inner loop represents OR.
                         subject = get_subject(conn, outer[0][0])
-                        sum += subject.uoc
+                        sum_uoc += subject.uoc
+
+                    # Prepare academic objects for output.
                     output += stringify_acadobjs(acadobjs)
-                    output = f"Need {sum} more UOC for {courses['rname']}\n" + output
+
+                    # Prepend UOC count to academic object list.
+                    output = f"Need {sum_uoc} more UOC for {courses['rname']}\n" + output
                     print(output)
                     checked_off = False
+            
+            # Only need to check min req for this since student may take any variety of courses.
             if courses["rtype"] in ["elective", "gened", "free"]:
                 if courses['min_req'] > 0:
                     print(f"Need {courses['min_req']} more UOC for {courses['rname']}\n")
@@ -125,19 +169,24 @@ if argc == 4:
     program_code = sys.argv[2]
     stream_code = sys.argv[3]
 
-conn = psycopg2.connect("dbname=ass2")
+conn = None
 
 try:
+    conn = psycopg2.connect("dbname=ass2")
+
+    # Get student information.
     stu_info = get_latest_student(conn, zid)
     if not stu_info:
         print(f"Invalid student id {zid}")
         exit(1)
 
+    # Get program information.
     program_info = get_program(conn, program_code or stu_info.program_code)
     if not program_info:
         print(f"Invalid program code {program_code}")
         exit(1)
 
+    # Get stream information.
     stream_info = get_stream(conn, stream_code or stu_info.stream_code)
     if not stream_info:
         print(f"Invalid program code {stream_code}")
@@ -191,11 +240,7 @@ try:
         course["course_uoc"] = " 0uoc"
         achieved_uoc -= course["uoc"]
 
-    # Print transcript.
-    for course in transcript:
-        print(f"{course['code']} {course['term']} {course['title']:<32.31s}"
-              f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  {course.get('course_uoc', '')}  {course.get('rname', '')}")
-    print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")
+    print_transcript(transcript, achieved_uoc, wam)
 
     # Print remaining progression.
     is_eligible = True

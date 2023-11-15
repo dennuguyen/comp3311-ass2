@@ -5,10 +5,12 @@ import sys
 import psycopg2
 import re
 
-conn = psycopg2.connect("dbname=ass2")
-curs = conn.cursor()
+conn = None
+curs = None
 
 try:
+    conn = psycopg2.connect("dbname=ass2")
+    curs = conn.cursor()
     curs.execute(
         """
         with student_enrolments as (
@@ -34,19 +36,20 @@ try:
 
     print("Term  #Locl  #Intl Proportion")
     for term, status in curs.fetchall():
+        # Anybody who is not international is a local.
         if status == "INTL":
             num_intls += 1
         else:
             num_locals += 1
 
-        # When term changes, print the proportion so far
+        # When term changes, print the proportion so far.
         if prev_term != term:
             print(row())
             prev_term = term
             num_locals = 0
             num_intls = 0
 
-    # Print very last row
+    # Print very last row.
     print(row())
 
 except Exception as err:

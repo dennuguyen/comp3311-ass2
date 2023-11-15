@@ -7,6 +7,9 @@ import re
 from helpers import get_program, get_stream, get_requirements, get_academic_objects, stringify_acadobjs
 
 def min_max_to_str(min_req, max_req):
+    """
+    Helper function which converts min_req and max_req to plain english.
+    """
     if min_req and not max_req:
         return f"at least {min_req}"
     if not min_req and max_req:
@@ -31,7 +34,7 @@ else:
     print("Invalid code")
     exit(1)
 
-conn = psycopg2.connect("dbname=ass2")
+conn = None
 
 core_string = ""
 elective_string = ""
@@ -41,6 +44,8 @@ stream_string = ""
 uoc_string = ""
 
 try:
+    conn = psycopg2.connect("dbname=ass2")
+
     if codeOf == "program":
         program_info = get_program(conn, code)
         if not program_info:
@@ -61,25 +66,25 @@ try:
 
     print("Academic Requirements:")
 
-    # Iterates through each requirement type.
-    for result in requirements:
-        if result.rtype == "core":
-            core_string += f"all courses from {result.rname}\n"
-            acadobjs = get_academic_objects(conn, result.rtype, result.acadobjs)
+    # Iterates through each requirement type and stores output in strings.
+    for req in requirements:
+        if req.rtype == "core":
+            core_string += f"all courses from {req.rname}\n"
+            acadobjs = get_academic_objects(conn, req.rtype, req.acadobjs)
             core_string += stringify_acadobjs(acadobjs)
-        elif result.rtype == "elective":
-            elective_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC courses from {result.rname}\n"
-            elective_string += "- " + result.acadobjs + "\n"
-        elif result.rtype == "free":
-            free_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC of {result.rname}\n"
-        elif result.rtype == "gened":
-            gened_string += f"{min_max_to_str(result.min_req, result.max_req)} UOC of {result.rname}\n"
-        elif result.rtype == "stream":
-            stream_string += f"{min_max_to_str(result.min_req, result.max_req)} stream from {result.rname}\n"
-            acadobjs = get_academic_objects(conn, result.rtype, result.acadobjs)
+        elif req.rtype == "elective":
+            elective_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC courses from {req.rname}\n"
+            elective_string += "- " + req.acadobjs + "\n"
+        elif req.rtype == "free":
+            free_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC of {req.rname}\n"
+        elif req.rtype == "gened":
+            gened_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC of {req.rname}\n"
+        elif req.rtype == "stream":
+            stream_string += f"{min_max_to_str(req.min_req, req.max_req)} stream from {req.rname}\n"
+            acadobjs = get_academic_objects(conn, req.rtype, req.acadobjs)
             stream_string += stringify_acadobjs(acadobjs)
-        elif result.rtype == "uoc":
-            uoc_string += f"Total UOC {min_max_to_str(result.min_req, result.max_req)} UOC\n"
+        elif req.rtype == "uoc":
+            uoc_string += f"Total UOC {min_max_to_str(req.min_req, req.max_req)} UOC\n"
         else:
             raise ValueError("Invalid requirement type")
 

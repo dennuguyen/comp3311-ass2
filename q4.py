@@ -4,7 +4,7 @@
 import sys
 import psycopg2
 import re
-from helpers import get_latest_student, get_full_transcript
+from helpers import get_latest_student, get_full_transcript, print_transcript
 
 argc = len(sys.argv)
 if argc < 2:
@@ -20,22 +20,23 @@ if not digits.match(zid):
     print(f"Invalid student ID {zid}")
     exit(1)
 
-conn = psycopg2.connect("dbname=ass2")
+conn = None
 
 try:
+    conn = psycopg2.connect("dbname=ass2")
+
+    # Get student information.
     stu_info = get_latest_student(conn, zid)
     if not stu_info:
         print(f"Invalid student ID {zid}")
         exit(1)
 
+    # Print header.
     print(f"{stu_info.zid} {stu_info.last_name}, {stu_info.first_name}")
     print(f"{stu_info.program_code} {stu_info.stream_code} {stu_info.program_name}")
 
     transcript, achieved_uoc, wam = get_full_transcript(conn, stu_info.zid)
-    for result in transcript:
-        print(f"{result['code']} {result['term']} {result['title']:<32.31s}"
-              f"{result['mark'] or '-':>3} {result['grade'] or '-':>2s}  {result['course_uoc']}")
-    print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")
+    print_transcript(transcript, achieved_uoc, wam)
 
 except Exception as err:
     print(err)

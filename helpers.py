@@ -11,17 +11,16 @@ def stringify_acadobjs(input):
     - COMP9900 Information Technology Project
       or COMP9991 Research Project A
     """
-
     output = ""
     for item in input:
         for i, subitem in enumerate(item):
-            if i > 0:
-                output += f"  or {subitem[0]} {subitem[1]}\n"
-            else:
-                output += f"- {subitem[0]} {subitem[1]}\n"
+            output += ("  or " if i > 0 else "- ") + f"{subitem[0]} {subitem[1]}\n"
     return output
 
 def get_program(conn, code):
+    """
+    Get program code and name given program code.
+    """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute("select code, name from programs where code = %s", [code])
     info = curs.fetchone()
@@ -29,6 +28,9 @@ def get_program(conn, code):
     return info or None
 
 def get_stream(conn, code):
+    """
+    Get stream code and name given stream code.
+    """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute("select code, name from streams where code = %s", [code])
     info = curs.fetchone()
@@ -36,6 +38,9 @@ def get_stream(conn, code):
     return info or None
 
 def get_subject(conn, code):
+    """
+    Get subject code, name, and uoc given subject code.
+    """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute("select code, title as name, uoc from subjects where code = %s", [code])
     info = curs.fetchone()
@@ -43,6 +48,10 @@ def get_subject(conn, code):
     return info or None
 
 def get_latest_student(conn, zid):
+    """
+    Get student id, zid, last name, first name, program code, program name, stream code,
+    and stream name given zid. This is the latest student info.
+    """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute(
         """
@@ -70,6 +79,11 @@ def get_latest_student(conn, zid):
     return info or None
 
 def get_requirements(conn, codeOf, code):
+    """
+    Get requirement subject/stream code, subject/stream name, requirement name,
+    requirement type, min requirements, max requirements, and academic objects
+    given subject/stream type (codeOf) and subject/stream code (code).
+    """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute(
         """
@@ -92,9 +106,15 @@ def get_requirements(conn, codeOf, code):
     return info or None
 
 def get_stream_requirements(conn, code):
+    """
+    Convenience function to get stream requirements.
+    """
     return get_requirements(conn, "stream", code)
 
 def get_program_requirements(conn, code):
+    """
+    Convenience function to get program requirements.
+    """
     return get_requirements(conn, "program", code)
 
 def get_academic_objects(conn, rtype, acadobjs):
@@ -119,7 +139,7 @@ def get_academic_objects(conn, rtype, acadobjs):
     curs = conn.cursor()
     for item in acadobjs.split(","):
 
-        # Handle OR cases
+        # The next level of for loop handles OR case.
         subitems = item.replace("{", "").replace("}", "").split(";")
         for i, code in enumerate(subitems):
             curs.execute(query, [code])
@@ -133,6 +153,10 @@ def get_academic_objects(conn, rtype, acadobjs):
     return output
 
 def get_transcript(conn, zid):
+    """
+    Get academic transcript as set of code, term, title, mark, grade, and uoc
+    given a zid. This is ordered by term then by code.
+    """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute(
         """
@@ -196,9 +220,16 @@ def get_full_transcript(conn, zid):
         transcript[i] = transcript[i]._asdict()
         transcript[i]["course_uoc"] = course_uoc
 
+        # Handle edge cases where FL and AF should just have 0 mark.
         if transcript[i]["grade"] in ["FL", "AF"] and not transcript[i]["mark"]:
             transcript[i]["mark"] = "0"
 
     wam = weighted_mark_sum / attempted_uoc
 
     return (transcript, achieved_uoc, wam)
+
+def print_transcript(transcript, achieved_uoc, wam):
+    for course in transcript:
+        print(f"{course['code']} {course['term']} {course['title']:<32.31s}"
+              f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  {course.get('course_uoc', '')}  {course.get('rname', '')}")
+    print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")

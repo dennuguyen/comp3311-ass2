@@ -16,16 +16,19 @@ if not re.compile("^[A-Z]{4}[0-9]{4}$").match(subject):
     print("Invalid subject code")
     exit(1)
 
-conn = psycopg2.connect("dbname=ass2")
-curs = conn.cursor()
+conn = None
+curs = None
 
 try:
-    # Get subject information
+    conn = psycopg2.connect("dbname=ass2")
+    curs = conn.cursor()
+
+    # Get subject information.
     curs.execute("select code, title from subjects where code = %s", [subject])
     code, title = curs.fetchone()
     print(code, title)
 
-    # Get satisfaction rate, number of responses, and number of students for each course
+    # Get satisfaction rate, number of responses, and number of students for each course.
     curs.execute(
         """
         select
