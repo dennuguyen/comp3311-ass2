@@ -148,7 +148,7 @@ def get_full_transcript(conn, zid):
     achieved_uoc = 0
 
     for i in range(len(transcript)):
-        course_uoc = None
+        course_uoc = ""
 
         # Grade is valid so give subject UOC a value and sum achieved UOC.
         if transcript[i].grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
