@@ -95,6 +95,8 @@ def get_academic_objects(conn, rtype, acadobjs):
     output = []
     curs = conn.cursor()
     for item in acadobjs.split(","):
+
+        # Handle OR cases
         subitems = item.replace("{", "").replace("}", "").split(";")
         for i, code in enumerate(subitems):
             curs.execute(query, [code])
