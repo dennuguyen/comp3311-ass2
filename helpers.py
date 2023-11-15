@@ -2,7 +2,6 @@
 # add here any functions to share between Python scripts 
 # you must submit this even if you add nothing
 
-from types import SimpleNamespace
 from psycopg2.extras import NamedTupleCursor
 from psycopg2.extensions import AsIs
 
@@ -165,10 +164,9 @@ def get_full_transcript(conn, zid):
         # Compute weighted mark sum.
         weighted_mark_sum += transcript[i].uoc * (transcript[i].mark or 0)
 
-        # Overwrite namedtuple as dict to allow course UOC insertion and convert back.
+        # Overwrite namedtuple as dict to allow course UOC insertion.
         transcript[i] = transcript[i]._asdict()
         transcript[i]["course_uoc"] = course_uoc
-        transcript[i] = SimpleNamespace(**transcript[i])
 
     wam = weighted_mark_sum / attempted_uoc
 
