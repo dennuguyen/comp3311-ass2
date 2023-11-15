@@ -28,11 +28,13 @@ try:
     prev_term = "19T1"
     num_locals = 0
     num_intls = 0
-    
+
     # Helper to print table rows.
     def row():
-        return (f"{prev_term} {num_locals:6d} {num_intls:6d}"
-                f"{(num_locals / num_intls if num_intls else 0):6.1f}")
+        return (
+            f"{prev_term} {num_locals:6d} {num_intls:6d}"
+            f"{(num_locals / num_intls if num_intls else 0):6.1f}"
+        )
 
     print("Term  #Locl  #Intl Proportion")
     for term, status in curs.fetchall():

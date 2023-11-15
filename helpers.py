@@ -1,9 +1,10 @@
 # COMP3311 21T3 Ass2 ... Python helper functions
-# add here any functions to share between Python scripts 
+# add here any functions to share between Python scripts
 # you must submit this even if you add nothing
 
 from psycopg2.extras import NamedTupleCursor
 from psycopg2.extensions import AsIs
+
 
 def stringify_acadobjs(input):
     """
@@ -17,6 +18,7 @@ def stringify_acadobjs(input):
             output += ("  or " if i > 0 else "- ") + f"{subitem[0]} {subitem[1]}\n"
     return output
 
+
 def get_program(conn, code):
     """
     Get program code and name given program code.
@@ -26,6 +28,7 @@ def get_program(conn, code):
     info = curs.fetchone()
     curs.close()
     return info or None
+
 
 def get_stream(conn, code):
     """
@@ -37,15 +40,19 @@ def get_stream(conn, code):
     curs.close()
     return info or None
 
+
 def get_subject(conn, code):
     """
     Get subject code, name, and uoc given subject code.
     """
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
-    curs.execute("select code, title as name, uoc from subjects where code = %s", [code])
+    curs.execute(
+        "select code, title as name, uoc from subjects where code = %s", [code]
+    )
     info = curs.fetchone()
     curs.close()
     return info or None
+
 
 def get_latest_student(conn, zid):
     """
@@ -72,11 +79,13 @@ def get_latest_student(conn, zid):
         inner join terms on terms.id = program_enrolments.term
         where people.zid = %s
         order by terms.starting desc
-        """
-    , [zid])
+        """,
+        [zid],
+    )
     info = curs.fetchone()
     curs.close()
     return info or None
+
 
 def get_requirements(conn, codeOf, code):
     """
@@ -98,12 +107,13 @@ def get_requirements(conn, codeOf, code):
         from %ss
         inner join requirements on requirements.for_%s = %ss.id
         where %ss.code = %s
-        """
-        , [AsIs(codeOf) for i in range(6)] + [code]
+        """,
+        [AsIs(codeOf) for i in range(6)] + [code],
     )
     info = curs.fetchall()
     curs.close()
     return info or None
+
 
 def get_stream_requirements(conn, code):
     """
@@ -111,11 +121,13 @@ def get_stream_requirements(conn, code):
     """
     return get_requirements(conn, "stream", code)
 
+
 def get_program_requirements(conn, code):
     """
     Convenience function to get program requirements.
     """
     return get_requirements(conn, "program", code)
+
 
 def get_academic_objects(conn, rtype, acadobjs):
     """
@@ -152,6 +164,7 @@ def get_academic_objects(conn, rtype, acadobjs):
     curs.close()
     return output
 
+
 def get_transcript(conn, zid):
     """
     Get academic transcript as set of code, term, title, mark, grade, and uoc
@@ -177,11 +190,13 @@ def get_transcript(conn, zid):
         )
         select * from transcript
         order by transcript.term, transcript.code
-        """
-    , [zid])
+        """,
+        [zid],
+    )
     info = curs.fetchall()
     curs.close()
     return info or None
+
 
 def get_full_transcript(conn, zid):
     """
@@ -198,7 +213,21 @@ def get_full_transcript(conn, zid):
         course_uoc = f"{'unrs':>5}"
 
         # Grade is valid so give subject UOC a value and sum achieved UOC.
-        if transcript[i].grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
+        if transcript[i].grade in [
+            "A",
+            "B",
+            "C",
+            "D",
+            "HD",
+            "DN",
+            "CR",
+            "PS",
+            "XE",
+            "T",
+            "SY",
+            "EC",
+            "RC",
+        ]:
             course_uoc = f"{transcript[i].uoc:2d}uoc"
             achieved_uoc += transcript[i].uoc
 
@@ -207,7 +236,12 @@ def get_full_transcript(conn, zid):
             course_uoc = f"{'fail':>5}"
 
         # Attempted UOC only counts for these grades.
-        attempted_uoc += transcript[i].uoc if transcript[i].grade in ["HD", "DN", "CR", "PS", "AF", "FL", "UF", "E", "F"] else 0
+        attempted_uoc += (
+            transcript[i].uoc
+            if transcript[i].grade
+            in ["HD", "DN", "CR", "PS", "AF", "FL", "UF", "E", "F"]
+            else 0
+        )
 
         # Compute weighted mark sum.
         weighted_mark_sum += transcript[i].uoc * (transcript[i].mark or 0)
@@ -228,11 +262,14 @@ def get_full_transcript(conn, zid):
 
     return (transcript, achieved_uoc, wam)
 
+
 def print_transcript(transcript, achieved_uoc, wam):
     """
     Prints a full transcript. Requires achieved UOC and WAM.
     """
     for course in transcript:
-        print(f"{course['code']} {course['term']} {course['title']:<32.31s}"
-              f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  {course.get('course_uoc', '')}  {course.get('rname', '')}")
+        print(
+            f"{course['code']} {course['term']} {course['title']:<32.31s}"
+            f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  {course.get('course_uoc', '')}  {course.get('rname', '')}"
+        )
     print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")

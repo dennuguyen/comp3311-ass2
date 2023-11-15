@@ -50,14 +50,16 @@ try:
             courses.satisfact,
             courses.nresponses,
             people.full_name
-        """
-        , [subject]
+        """,
+        [subject],
     )
 
     print("Term  Satis  #resp   #stu  Convenor")
     for code, satisfaction, nresponses, nstudents, convenor in curs.fetchall():
-        print(f"{code} {satisfaction or '?':>6} {nresponses or '?':>6}"
-              f"{nstudents:>6}  {convenor}")
+        print(
+            f"{code} {satisfaction or '?':>6} {nresponses or '?':>6}"
+            f"{nstudents:>6}  {convenor}"
+        )
 
 except Exception as err:
     print(err)

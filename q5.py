@@ -5,7 +5,19 @@ import sys
 import traceback
 import psycopg2
 import re
-from helpers import get_latest_student, get_program, get_stream, get_program_requirements, get_academic_objects, get_full_transcript, get_stream_requirements, stringify_acadobjs, get_subject, print_transcript
+from helpers import (
+    get_latest_student,
+    get_program,
+    get_stream,
+    get_program_requirements,
+    get_academic_objects,
+    get_full_transcript,
+    get_stream_requirements,
+    stringify_acadobjs,
+    get_subject,
+    print_transcript,
+)
+
 
 def process_requirements(requirements):
     """
@@ -14,7 +26,7 @@ def process_requirements(requirements):
     """
 
     # Convert requirements from [namedtuple] into dict where rname is key.
-    requirements = { req.rname: req._asdict() for req in requirements }
+    requirements = {req.rname: req._asdict() for req in requirements}
 
     # Convert acadobjs from strings to lists.
     for rname, req in requirements.items():
@@ -25,6 +37,7 @@ def process_requirements(requirements):
 
     return requirements
 
+
 def course_code_matcher(test, code):
     """
     Tests course codes against a generic code e.g.
@@ -32,6 +45,7 @@ def course_code_matcher(test, code):
         ####1#### + MATH1000 => True
     """
     return bool(re.match(test.replace("#", "."), code))
+
 
 def tick_off(requirements, course, rtype):
     """
@@ -70,7 +84,10 @@ def tick_off(requirements, course, rtype):
                                 acadobjs.remove(outer)
                                 courses["min_req"] -= course["uoc"]
                                 return cleanup()
-                            if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
+                            if rtype in ["gened", "free"] or (
+                                "#" in course_code
+                                and course_code_matcher(course_code, course["code"])
+                            ):
                                 courses["min_req"] -= course["uoc"]
                                 return cleanup()
                         elif courses["max_req"] - course["uoc"] >= 0:
@@ -79,11 +96,15 @@ def tick_off(requirements, course, rtype):
                                 courses["min_req"] -= course["uoc"]
                                 courses["max_req"] -= course["uoc"]
                                 return cleanup()
-                            if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
+                            if rtype in ["gened", "free"] or (
+                                "#" in course_code
+                                and course_code_matcher(course_code, course["code"])
+                            ):
                                 courses["min_req"] -= course["uoc"]
                                 courses["max_req"] -= course["uoc"]
                                 return cleanup()
     return False
+
 
 def tick_off_core(requirements, course):
     """
@@ -91,11 +112,13 @@ def tick_off_core(requirements, course):
     """
     return tick_off(requirements, course, "core")
 
+
 def tick_off_elective(requirements, course):
     """
     Convenience function to tick off elective requirements.
     """
     return tick_off(requirements, course, "elective")
+
 
 def tick_off_gened(requirements, course):
     """
@@ -103,11 +126,13 @@ def tick_off_gened(requirements, course):
     """
     return tick_off(requirements, course, "gened")
 
+
 def tick_off_free(requirements, course):
     """
     Convenience function to tick off free elective requirements.
     """
     return tick_off(requirements, course, "free")
+
 
 def check_off(requirements, rtype):
     """
@@ -136,17 +161,22 @@ def check_off(requirements, rtype):
                     output += stringify_acadobjs(acadobjs)
 
                     # Prepend UOC count to academic object list.
-                    output = f"Need {sum_uoc} more UOC for {courses['rname']}\n" + output
+                    output = (
+                        f"Need {sum_uoc} more UOC for {courses['rname']}\n" + output
+                    )
                     print(output)
                     checked_off = False
-            
+
             # Only need to check min req for this since student may take any variety of courses.
             if courses["rtype"] in ["elective", "gened", "free"]:
-                if courses['min_req'] > 0:
-                    print(f"Need {courses['min_req']} more UOC for {courses['rname']}\n")
+                if courses["min_req"] > 0:
+                    print(
+                        f"Need {courses['min_req']} more UOC for {courses['rname']}\n"
+                    )
                     checked_off = False
 
     return checked_off
+
 
 argc = len(sys.argv)
 if argc < 2:
@@ -154,7 +184,7 @@ if argc < 2:
     exit(1)
 
 zid = sys.argv[1]
-if zid[0] == 'z':
+if zid[0] == "z":
     zid = zid[1:8]
 
 digits = re.compile("^\d{7}$")
@@ -254,7 +284,7 @@ try:
     is_eligible &= check_off(program_requirements, "free")
 
     if is_eligible:
-        print("Eligible to graduate")        
+        print("Eligible to graduate")
 
 except Exception:
     print(traceback.format_exc())

@@ -12,7 +12,7 @@ if argc < 2:
     exit(1)
 
 zid = sys.argv[1]
-if zid[0] == 'z':
+if zid[0] == "z":
     zid = zid[1:8]
 
 digits = re.compile("^\d{7}$")

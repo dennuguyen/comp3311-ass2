@@ -4,7 +4,14 @@
 import sys
 import psycopg2
 import re
-from helpers import get_program, get_stream, get_requirements, get_academic_objects, stringify_acadobjs
+from helpers import (
+    get_program,
+    get_stream,
+    get_requirements,
+    get_academic_objects,
+    stringify_acadobjs,
+)
+
 
 def min_max_to_str(min_req, max_req):
     """
@@ -19,6 +26,7 @@ def min_max_to_str(min_req, max_req):
     if min_req and max_req and min_req == max_req:
         return f"{min_req}"
     return ""  # min_req and max_req are null
+
 
 argc = len(sys.argv)
 if argc < 2:
@@ -76,11 +84,17 @@ try:
             elective_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC courses from {req.rname}\n"
             elective_string += "- " + req.acadobjs + "\n"
         elif req.rtype == "free":
-            free_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC of {req.rname}\n"
+            free_string += (
+                f"{min_max_to_str(req.min_req, req.max_req)} UOC of {req.rname}\n"
+            )
         elif req.rtype == "gened":
-            gened_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC of {req.rname}\n"
+            gened_string += (
+                f"{min_max_to_str(req.min_req, req.max_req)} UOC of {req.rname}\n"
+            )
         elif req.rtype == "stream":
-            stream_string += f"{min_max_to_str(req.min_req, req.max_req)} stream from {req.rname}\n"
+            stream_string += (
+                f"{min_max_to_str(req.min_req, req.max_req)} stream from {req.rname}\n"
+            )
             acadobjs = get_academic_objects(conn, req.rtype, req.acadobjs)
             stream_string += stringify_acadobjs(acadobjs)
         elif req.rtype == "uoc":
@@ -97,7 +111,7 @@ try:
     print(free_string)
 
 except Exception as err:
-  print(err)
+    print(err)
 finally:
     if conn:
         conn.close()
