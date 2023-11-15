@@ -5,7 +5,7 @@ import sys
 import traceback
 import psycopg2
 import re
-from helpers import get_latest_student, get_program, get_stream, get_program_requirements, get_academic_objects, get_full_transcript, get_stream_requirements
+from helpers import get_latest_student, get_program, get_stream, get_program_requirements, get_academic_objects, get_full_transcript, get_stream_requirements, stringify_acadobjs, get_subject
 
 def process_requirements(requirements):
     """
@@ -28,30 +28,42 @@ def process_requirements(requirements):
 def course_code_matcher(test, code):
     return bool(re.match(test.replace("#", "."), code))
 
+# Tick off requirements (brute force) and modify course transcript if necessary.
 def tick_off(requirements, course, rtype):
-    for rname, courses_list in requirements.items():
-        if courses_list["rtype"] == rtype:
-            acadobjs = courses_list["acadobjs"]
+    for rname, courses in requirements.items():
+        if courses["rtype"] == rtype:
+            acadobjs = courses["acadobjs"]
             for outer in acadobjs:
                 for inner in outer:
-                    course_code, course_name = inner
+                    course_code, _ = inner
                     if rtype == "core":
                         if course_code == course["code"]:
                             acadobjs.remove(outer)
                             course["rname"] = rname
                             return True
-                    elif courses_list["min_req"] > 0:
-                        if course_code == course["code"]:
-                            acadobjs.remove(outer)
-                            courses_list["min_req"] -= course["uoc"]
-                            # courses_list["max_req"] -= course["uoc"]
-                            course["rname"] = rname
-                            return True
-                        if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
-                            courses_list["min_req"] -= course["uoc"]
-                            # courses_list["max_req"] -= course["uoc"]
-                            course["rname"] = rname
-                            return True
+                    elif courses["min_req"] > 0:
+                        if courses["max_req"] is None:
+                            if course_code == course["code"]:
+                                acadobjs.remove(outer)
+                                courses["min_req"] -= course["uoc"]
+                                course["rname"] = rname
+                                return True
+                            if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
+                                courses["min_req"] -= course["uoc"]
+                                course["rname"] = rname
+                                return True
+                        elif courses["max_req"] > 0:
+                            if course_code == course["code"]:
+                                acadobjs.remove(outer)
+                                courses["min_req"] -= course["uoc"]
+                                courses["max_req"] -= course["uoc"]
+                                course["rname"] = rname
+                                return True
+                            if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
+                                courses["min_req"] -= course["uoc"]
+                                courses["max_req"] -= course["uoc"]
+                                course["rname"] = rname
+                                return True
     return False
 
 def tick_off_core(requirements, course):
@@ -65,6 +77,31 @@ def tick_off_gened(requirements, course):
 
 def tick_off_free(requirements, course):
     return tick_off(requirements, course, "free")
+
+def check_off(requirements, rtype):
+    checked_off = True
+    for rname, courses in requirements.items():
+        if courses["rtype"] == rtype:
+            if courses["rtype"] == "core":
+                sum = 0
+                output = ""
+                acadobjs = courses["acadobjs"]
+                if acadobjs:
+                    # Sum UOC of all academic objects.
+                    for outer in acadobjs:
+                        # Only get one leaf from this level since this level represents OR.
+                        subject = get_subject(conn, outer[0][0])
+                        sum += subject.uoc
+                    output += stringify_acadobjs(acadobjs)
+                    output = f"Need {sum} more UOC for {courses['rname']}\n" + output
+                    print(output)
+                    checked_off = False
+            if courses["rtype"] in ["elective", "gened", "free"]:
+                if courses['min_req'] > 0:
+                    print(f"Need {courses['min_req']} more UOC for {courses['rname']}\n")
+                    checked_off = False
+
+    return checked_off
 
 argc = len(sys.argv)
 if argc < 2:
@@ -107,7 +144,7 @@ try:
 
     # Print header.
     print(f"{stu_info.zid} {stu_info.last_name}, {stu_info.first_name}")
-    print(f"{stu_info.program_code} {stu_info.stream_code} {stu_info.program_name}")
+    print(f"{program_info.code} {stream_info.code} {program_info.name}")
 
     # Get program requirements.
     program_requirements = get_program_requirements(conn, program_info.code)
@@ -119,8 +156,7 @@ try:
 
     transcript, achieved_uoc, wam = get_full_transcript(conn, stu_info.zid)
 
-    # Tick off requirements and attach requirements to each course on transcript.
-    # Brute force it.
+    # Tick off requirements.
     for course in transcript:
         if "uoc" not in course["course_uoc"]:
             continue
@@ -149,6 +185,7 @@ try:
         if tick_off_free(program_requirements, course):
             continue
 
+        # Nothing could be ticked off so course cannot be counted.
         course["rname"] = "Could not be allocated"
         course["course_uoc"] = " 0uoc"
         achieved_uoc -= course["uoc"]
@@ -160,11 +197,21 @@ try:
     print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")
 
     # Print remaining progression.
-    print("Eligible to graduate")
+    is_eligible = True
+    is_eligible &= check_off(stream_requirements, "core")
+    is_eligible &= check_off(program_requirements, "core")
+    is_eligible &= check_off(stream_requirements, "elective")
+    is_eligible &= check_off(program_requirements, "elective")
+    is_eligible &= check_off(stream_requirements, "gened")
+    is_eligible &= check_off(program_requirements, "gened")
+    is_eligible &= check_off(stream_requirements, "free")
+    is_eligible &= check_off(program_requirements, "free")
+
+    if is_eligible:
+        print("Eligible to graduate")        
 
 except Exception:
     print(traceback.format_exc())
 finally:
     if conn:
         conn.close()
-

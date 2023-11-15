@@ -4,7 +4,7 @@
 import sys
 import psycopg2
 import re
-from helpers import get_program, get_stream, get_requirements, get_academic_objects
+from helpers import get_program, get_stream, get_requirements, get_academic_objects, stringify_acadobjs
 
 def min_max_to_str(min_req, max_req):
     if min_req and not max_req:
@@ -16,22 +16,6 @@ def min_max_to_str(min_req, max_req):
     if min_req and max_req and min_req == max_req:
         return f"{min_req}"
     return ""  # min_req and max_req are null
-
-def stringify_acadobjs(input):
-    """
-    Given a list of academic objects, stringifies it in the following format:
-    - COMP9900 Information Technology Project
-      or COMP9991 Research Project A
-    """
-
-    output = ""
-    for item in input:
-        for i, subitem in enumerate(item):
-            if i > 0:
-                output += f"  or {subitem[0]} {subitem[1]}\n"
-            else:
-                output += f"- {subitem[0]} {subitem[1]}\n"
-    return output
 
 argc = len(sys.argv)
 if argc < 2:

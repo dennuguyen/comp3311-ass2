@@ -5,6 +5,22 @@
 from psycopg2.extras import NamedTupleCursor
 from psycopg2.extensions import AsIs
 
+def stringify_acadobjs(input):
+    """
+    Given a list of academic objects, stringifies it in the following format:
+    - COMP9900 Information Technology Project
+      or COMP9991 Research Project A
+    """
+
+    output = ""
+    for item in input:
+        for i, subitem in enumerate(item):
+            if i > 0:
+                output += f"  or {subitem[0]} {subitem[1]}\n"
+            else:
+                output += f"- {subitem[0]} {subitem[1]}\n"
+    return output
+
 def get_program(conn, code):
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute("select code, name from programs where code = %s", [code])
@@ -15,6 +31,13 @@ def get_program(conn, code):
 def get_stream(conn, code):
     curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute("select code, name from streams where code = %s", [code])
+    info = curs.fetchone()
+    curs.close()
+    return info or None
+
+def get_subject(conn, code):
+    curs = conn.cursor(cursor_factory=NamedTupleCursor)
+    curs.execute("select code, title as name, uoc from subjects where code = %s", [code])
     info = curs.fetchone()
     curs.close()
     return info or None
