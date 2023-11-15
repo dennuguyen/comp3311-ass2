@@ -47,6 +47,8 @@ try:
         # When term changes, print the proportion so far.
         if prev_term != term:
             print(row())
+
+            # Reset.
             prev_term = term
             num_locals = 0
             num_intls = 0
