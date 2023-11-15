@@ -3,9 +3,8 @@
 
 import sys
 import psycopg2
-from psycopg2.extensions import AsIs
 import re
-from helpers import get_program_info, get_stream_info
+from helpers import get_program, get_stream, get_requirements
 
 def min_max_to_str(min_req, max_req):
     if min_req and not max_req:
@@ -49,7 +48,6 @@ else:
     exit(1)
 
 conn = psycopg2.connect("dbname=ass2")
-curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
 
 core_string = ""
 elective_string = ""
@@ -60,42 +58,27 @@ uoc_string = ""
 
 try:
     if codeOf == "program":
-        program_info = get_program_info(conn, code)
+        program_info = get_program(conn, code)
         if not program_info:
             print("Invalid program code", code)
             exit(1)
 
-        print(program_info[1], program_info[2])
+        print(program_info.code, program_info.name)
 
     elif codeOf == "stream":
-        stream_info = get_stream_info(conn, code)
+        stream_info = get_stream(conn, code)
         if not stream_info:
             print("Invalid stream code", code)
             exit(1)
 
-        print(stream_info[1], stream_info[2])
+        print(stream_info.code, stream_info.name)
 
-    curs.execute(
-        """
-        select
-            %ss.code as scode,
-            %ss.name as sname,
-            requirements.name as rname,
-            requirements.rtype as rtype,
-            requirements.min_req as min_req,
-            requirements.max_req as max_req,
-            requirements.acadobjs as acadobjs
-        from %ss
-        inner join requirements on requirements.for_%s = %ss.id
-        where %ss.code = %s
-        """
-        , [AsIs(codeOf) for i in range(6)] + [code]
-    )
+    requirements = get_requirements(conn, codeOf, code)
 
     print("Academic Requirements:")
 
     # Iterates through each requirement type.
-    for result in curs.fetchall():
+    for result in requirements:
         if result.rtype == "core":
             core_string += f"all courses from {result.rname}\n"
             core_string += string_to_list(conn, result.acadobjs, "select title from subjects where code = %s")
@@ -125,7 +108,5 @@ try:
 except Exception as err:
   print(err)
 finally:
-    if curs:
-        curs.close()
     if conn:
         conn.close()

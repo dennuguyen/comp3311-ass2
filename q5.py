@@ -4,71 +4,78 @@
 import sys
 import psycopg2
 import re
-from helpers import getStudent, getProgram, getStream
-
-# define any local helper functions here
-
-### set up some globals
-
-usage = f"Usage: {sys.argv[0]} zID [Program Stream]"
-db = None
-
-### process command-line args
+from helpers import get_transcript, get_latest_student, get_program, get_stream, get_program_requirements
 
 argc = len(sys.argv)
 if argc < 2:
-  print(usage)
-  exit(1)
+    print(f"Usage: {sys.argv[0]} zID [Program Stream]")
+    exit(1)
+
 zid = sys.argv[1]
 if zid[0] == 'z':
-  zid = zid[1:8]
+    zid = zid[1:8]
+
 digits = re.compile("^\d{7}$")
 if not digits.match(zid):
-  print("Invalid student ID")
-  exit(1)
+    print("Invalid student ID")
+    exit(1)
 
-progCode = None
-strmCode = None
+program_code = None
+stream_code = None
 
 if argc == 4:
-  progCode = sys.argv[2]
-  strmCode = sys.argv[3]
+    program_code = sys.argv[2]
+    stream_code = sys.argv[3]
 
-# manipulate database
+conn = psycopg2.connect("dbname=ass2")
+
+############
+def create_requirement_buckets(conn, string, query):
+    output = ""
+    curs = conn.cursor()
+    array = string.split(",")
+    for item in array:
+        subitems = item.replace("{", "").replace("}", "").split(";")
+        for i, subitem in enumerate(subitems):
+            curs.execute(query, [subitem])
+            name = curs.fetchone()[0]
+            if i > 0:
+                output += f"  or {subitem} {name}\n"
+            else:
+                output += f"- {subitem} {name}\n"
+    curs.close()
+    return output
 
 try:
-  db = psycopg2.connect("dbname=ass2")
+    stu_info = get_latest_student(conn, zid)
+    print(stu_info)
+    if not stu_info:
+        print(f"Invalid student id {zid}")
+        exit(1)
 
-  stuInfo = getStudent(db,zid)
-  if not stuInfo:
-    print(f"Invalid student id {zid}")
-    exit(1)
-  #print(stuInfo) # debug
+    program_info = get_program(conn, program_code or stu_info.program_code)
+    if not program_info:
+        print(f"Invalid program code {program_code}")
+        exit(1)
 
-  if progCode:
-    progInfo = getProgram(db,progCode)
-    if not progInfo:
-      print(f"Invalid program code {progCode}")
-      exit(1)
-    #print(progInfo)  #debug
+    stream_info = get_stream(conn, stream_code or stu_info.stream_code)
+    if not stream_info:
+        print(f"Invalid program code {stream_code}")
+        exit(1)
 
-  if strmCode:
-    strmInfo = getStream(db,strmCode)
-    if not strmInfo:
-      print(f"Invalid program code {strmCode}")
-      exit(1)
-    #print(strmInfo)  #debug
+    print(program_info)
 
-  # if have a program/stream
-  #   show progression check on supplied program/stream
-  # else
-  #   show progression check on most recent program/stream enrolment
+    transcript = get_transcript(conn, stu_info.zid)
+    for result in transcript:
+        # result['requirement'] = 
+        obj = get_program_requirements(conn, program_info.code)
+        print(obj)
 
-  # ... add your code here ...
+    # ... add your code here ...
 
 except Exception as err:
-  print("DB error: ", err)
+    print(err)
 finally:
-  if db:
-    db.close()
+    if conn:
+        conn.close()
 

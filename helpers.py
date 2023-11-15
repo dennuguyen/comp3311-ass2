@@ -2,24 +2,25 @@
 # add here any functions to share between Python scripts 
 # you must submit this even if you add nothing
 
-import psycopg2.extras
+from psycopg2.extras import NamedTupleCursor
+from psycopg2.extensions import AsIs
 
-def get_program_info(conn, code):
-    curs = conn.cursor()
-    curs.execute("select * from programs where programs.code = %s", [code])
+def get_program(conn, code):
+    curs = conn.cursor(cursor_factory=NamedTupleCursor)
+    curs.execute("select code, name from programs where code = %s", [code])
     info = curs.fetchone()
     curs.close()
     return info or None
 
-def get_stream_info(conn, code):
-    curs = conn.cursor()
-    curs.execute("select * from streams where streams.code = %s", [code])
+def get_stream(conn, code):
+    curs = conn.cursor(cursor_factory=NamedTupleCursor)
+    curs.execute("select code, name from streams where code = %s", [code])
     info = curs.fetchone()
     curs.close()
     return info or None
 
-def get_latest_student_info(conn, zid):
-    curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
+def get_latest_student(conn, zid):
+    curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute(
         """
         select
@@ -45,8 +46,36 @@ def get_latest_student_info(conn, zid):
     curs.close()
     return info or None
 
+def get_requirements(conn, codeOf, code):
+    curs = conn.cursor(cursor_factory=NamedTupleCursor)
+    curs.execute(
+        """
+        select
+            %ss.code as scode,
+            %ss.name as sname,
+            requirements.name as rname,
+            requirements.rtype as rtype,
+            requirements.min_req as min_req,
+            requirements.max_req as max_req,
+            requirements.acadobjs as acadobjs
+        from %ss
+        inner join requirements on requirements.for_%s = %ss.id
+        where %ss.code = %s
+        """
+        , [AsIs(codeOf) for i in range(6)] + [code]
+    )
+    info = curs.fetchall()
+    curs.close()
+    return info or None
+
+def get_stream_requirements(conn, code):
+    return get_requirements(conn, "stream", code)
+
+def get_program_requirements(conn, code):
+    return get_requirements(conn, "program", code)
+
 def get_transcript(conn, zid):
-    curs = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
+    curs = conn.cursor(cursor_factory=NamedTupleCursor)
     curs.execute(
         """
         with transcript as (
