@@ -4,7 +4,7 @@
 import sys
 import psycopg2
 import re
-from helpers import get_latest_student, get_transcript
+from helpers import get_latest_student, get_full_transcript
 
 argc = len(sys.argv)
 if argc < 2:
@@ -31,35 +31,10 @@ try:
     print(f"{stu_info.zid} {stu_info.last_name}, {stu_info.first_name}")
     print(f"{stu_info.program_code} {stu_info.stream_code} {stu_info.program_name}")
 
-    transcript = get_transcript(conn, stu_info.zid)
-
-    wam = 0
-    weighted_mark_sum = 0
-    attempted_uoc = 0
-    achieved_uoc = 0
-
+    transcript, achieved_uoc, wam = get_full_transcript(conn, stu_info.zid)
     for result in transcript:
-        # Assume subject UOC is unresolved.
-        subject_uoc = f"{'unrs':>5}"
-
-        # Grade is valid so give subject UOC a value and sum achieved UOC.
-        if result.grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
-            subject_uoc = f"{result.uoc:2d}uoc"
-            achieved_uoc += result.uoc
-
-        # Grade is fail so mark subject UOC as fail.
-        subject_uoc = f"{'fail':>5}" if result.grade in ["AF", "FL", "UF", "E", "F"] else subject_uoc
-
-        # Attempted UOC only counts for these grades.
-        attempted_uoc += result.uoc if result.grade in ["HD", "DN", "CR", "PS", "AF", "FL", "UF", "E", "F"] else 0
-
-        # Compute weighted mark sum.
-        weighted_mark_sum += result.uoc * (result.mark or 0)
-
         print(f"{result.code} {result.term} {result.title:<32.31s}"
-              f"{result.mark or '-':>3} {result.grade:>2s}  {subject_uoc}")
-
-    wam = weighted_mark_sum / attempted_uoc
+              f"{result.mark or '-':>3} {result.grade:>2s}  {result.course_uoc}")
     print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")
 
 except Exception as err:

@@ -2,6 +2,7 @@
 # add here any functions to share between Python scripts 
 # you must submit this even if you add nothing
 
+from types import SimpleNamespace
 from psycopg2.extras import NamedTupleCursor
 from psycopg2.extensions import AsIs
 
@@ -81,9 +82,9 @@ def get_academic_objects(conn, rtype, acadobjs):
     The academic objects given must be retrieved directly from get_requirements.
 
     Example usage:
-        for result in requirements:
-            if result.rtype in ["core", "stream"]:
-                acadobjs_list = get_academic_objects(conn, result.rtype, result.acadobjs)
+        for transcript[i] in requirements:
+            if transcript[i].rtype in ["core", "stream"]:
+                acadobjs_list = get_academic_objects(conn, transcript[i].rtype, transcript[i].acadobjs)
     """
 
     query = ""
@@ -134,3 +135,41 @@ def get_transcript(conn, zid):
     info = curs.fetchall()
     curs.close()
     return info or None
+
+def get_full_transcript(conn, zid):
+    """
+    Gets the academic transcript with UOC passed for each course and with WAM.
+    """
+    transcript = get_transcript(conn, zid)
+
+    wam = 0
+    weighted_mark_sum = 0
+    attempted_uoc = 0
+    achieved_uoc = 0
+
+    for i in range(len(transcript)):
+        # Assume subject UOC is unresolved.
+        course_uoc = f"{'unrs':>5}"
+
+        # Grade is valid so give subject UOC a value and sum achieved UOC.
+        if transcript[i].grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
+            course_uoc = f"{transcript[i].uoc:2d}uoc"
+            achieved_uoc += transcript[i].uoc
+
+        # Grade is fail so mark subject UOC as fail.
+        course_uoc = f"{'fail':>5}" if transcript[i].grade in ["AF", "FL", "UF", "E", "F"] else course_uoc
+
+        # Attempted UOC only counts for these grades.
+        attempted_uoc += transcript[i].uoc if transcript[i].grade in ["HD", "DN", "CR", "PS", "AF", "FL", "UF", "E", "F"] else 0
+
+        # Compute weighted mark sum.
+        weighted_mark_sum += transcript[i].uoc * (transcript[i].mark or 0)
+
+        # Overwrite namedtuple as dict to allow course UOC insertion and convert back.
+        transcript[i] = transcript[i]._asdict()
+        transcript[i]["course_uoc"] = course_uoc
+        transcript[i] = SimpleNamespace(**transcript[i])
+
+    wam = weighted_mark_sum / attempted_uoc
+
+    return (transcript, achieved_uoc, wam)
