@@ -34,7 +34,7 @@ try:
     transcript, achieved_uoc, wam = get_full_transcript(conn, stu_info.zid)
     for result in transcript:
         print(f"{result['code']} {result['term']} {result['title']:<32.31s}"
-              f"{result['mark'] or '-':>3} {result['grade']:>2s}  {result['course_uoc']}")
+              f"{result['mark'] or '-':>3} {result['grade'] or '-':>2s}  {result['course_uoc'] or ''}")
     print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")
 
 except Exception as err:

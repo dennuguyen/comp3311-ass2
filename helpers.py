@@ -100,7 +100,8 @@ def get_academic_objects(conn, rtype, acadobjs):
         subitems = item.replace("{", "").replace("}", "").split(";")
         for i, code in enumerate(subitems):
             curs.execute(query, [code])
-            name = curs.fetchone()[0]
+            acadobj = curs.fetchone()
+            name = rtype if acadobj is None else acadobj[0]
             if i > 0:
                 output[-1].append((code, name))
             else:
