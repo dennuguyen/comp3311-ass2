@@ -148,8 +148,7 @@ def get_full_transcript(conn, zid):
     achieved_uoc = 0
 
     for i in range(len(transcript)):
-        # Assume subject UOC is unresolved.
-        course_uoc = f"{'unrs':>5}"
+        course_uoc = None
 
         # Grade is valid so give subject UOC a value and sum achieved UOC.
         if transcript[i].grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
@@ -164,6 +163,10 @@ def get_full_transcript(conn, zid):
 
         # Compute weighted mark sum.
         weighted_mark_sum += transcript[i].uoc * (transcript[i].mark or 0)
+
+        # Mark unresolved if there is no mark but a grade.
+        if not transcript[i].mark and transcript[i].grade:
+            course_uoc = f"{'unrs':>5}"
 
         # Overwrite namedtuple as dict to allow course UOC insertion.
         transcript[i] = transcript[i]._asdict()
