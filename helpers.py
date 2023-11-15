@@ -148,7 +148,7 @@ def get_full_transcript(conn, zid):
     achieved_uoc = 0
 
     for i in range(len(transcript)):
-        course_uoc = ""
+        course_uoc = f"{'unrs':>5}"
 
         # Grade is valid so give subject UOC a value and sum achieved UOC.
         if transcript[i].grade in ["A", "B", "C", "D", "HD", "DN", "CR", "PS", "XE", "T", "SY", "EC", "RC"]:
@@ -156,7 +156,8 @@ def get_full_transcript(conn, zid):
             achieved_uoc += transcript[i].uoc
 
         # Grade is fail so mark subject UOC as fail.
-        course_uoc = f"{'fail':>5}" if transcript[i].grade in ["AF", "FL", "UF", "E", "F"] else course_uoc
+        if transcript[i].grade in ["AF", "FL", "UF", "E", "F"]:
+            course_uoc = f"{'fail':>5}"
 
         # Attempted UOC only counts for these grades.
         attempted_uoc += transcript[i].uoc if transcript[i].grade in ["HD", "DN", "CR", "PS", "AF", "FL", "UF", "E", "F"] else 0
@@ -165,12 +166,15 @@ def get_full_transcript(conn, zid):
         weighted_mark_sum += transcript[i].uoc * (transcript[i].mark or 0)
 
         # Mark unresolved if there is no mark but a grade.
-        if not transcript[i].mark and transcript[i].grade:
-            course_uoc = f"{'unrs':>5}"
+        if not transcript[i].mark and not transcript[i].grade:
+            course_uoc = ""
 
         # Overwrite namedtuple as dict to allow course UOC insertion.
         transcript[i] = transcript[i]._asdict()
         transcript[i]["course_uoc"] = course_uoc
+
+        if transcript[i]["grade"] in ["FL", "AF"] and not transcript[i]["mark"]:
+            transcript[i]["mark"] = "0"
 
     wam = weighted_mark_sum / attempted_uoc
 
