@@ -31,7 +31,13 @@ def course_code_matcher(test, code):
 # Tick off requirements (brute force) and modify course transcript if necessary.
 def tick_off(requirements, course, rtype):
     for rname, courses in requirements.items():
-        if courses["rtype"] == rtype:
+
+        def cleanup():
+            requirements["Total UOC"]["min_req"] -= course["uoc"]
+            course["rname"] = rname
+            return True
+
+        if courses["rtype"] == rtype and requirements["Total UOC"]["min_req"] > 0:
             acadobjs = courses["acadobjs"]
             for outer in acadobjs:
                 for inner in outer:
@@ -39,31 +45,26 @@ def tick_off(requirements, course, rtype):
                     if rtype == "core":
                         if course_code == course["code"]:
                             acadobjs.remove(outer)
-                            course["rname"] = rname
-                            return True
-                    elif courses["min_req"] > 0:
+                            return cleanup()
+                    elif courses["min_req"] - course["uoc"] >= 0:
                         if courses["max_req"] is None:
                             if course_code == course["code"]:
                                 acadobjs.remove(outer)
                                 courses["min_req"] -= course["uoc"]
-                                course["rname"] = rname
-                                return True
+                                return cleanup()
                             if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
                                 courses["min_req"] -= course["uoc"]
-                                course["rname"] = rname
-                                return True
-                        elif courses["max_req"] > 0:
+                                return cleanup()
+                        elif courses["max_req"] - course["uoc"] >= 0:
                             if course_code == course["code"]:
                                 acadobjs.remove(outer)
                                 courses["min_req"] -= course["uoc"]
                                 courses["max_req"] -= course["uoc"]
-                                course["rname"] = rname
-                                return True
+                                return cleanup()
                             if rtype in ["gened", "free"] or ("#" in course_code and course_code_matcher(course_code, course["code"])):
                                 courses["min_req"] -= course["uoc"]
                                 courses["max_req"] -= course["uoc"]
-                                course["rname"] = rname
-                                return True
+                                return cleanup()
     return False
 
 def tick_off_core(requirements, course):
