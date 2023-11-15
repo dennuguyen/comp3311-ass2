@@ -28,7 +28,7 @@ try:
     code, title = curs.fetchone()
     print(code, title)
 
-    # Get satisfaction rate, number of responses, and number of students for each course.
+    # Get satisfaction rate, number responses, and number students for each course.
     curs.execute(
         """
         select

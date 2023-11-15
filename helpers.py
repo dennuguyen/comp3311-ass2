@@ -138,7 +138,8 @@ def get_academic_objects(conn, rtype, acadobjs):
     Example usage:
         for transcript[i] in requirements:
             if transcript[i].rtype in ["core", "stream"]:
-                acadobjs_list = get_academic_objects(conn, transcript[i].rtype, transcript[i].acadobjs)
+                acadobjs_list = get_academic_objects(conn, transcript[i].rtype,
+                                                     transcript[i].acadobjs)
     """
 
     query = ""
@@ -270,6 +271,7 @@ def print_transcript(transcript, achieved_uoc, wam):
     for course in transcript:
         print(
             f"{course['code']} {course['term']} {course['title']:<32.31s}"
-            f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  {course.get('course_uoc', '')}  {course.get('rname', '')}"
+            f"{course['mark'] or '-':>3} {course['grade'] or '-':>2s}  "
+            f"{course.get('course_uoc', '')}  {course.get('rname', '')}"
         )
     print(f"UOC = {achieved_uoc}, WAM = {wam:2.1f}")

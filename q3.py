@@ -81,7 +81,9 @@ try:
             acadobjs = get_academic_objects(conn, req.rtype, req.acadobjs)
             core_string += stringify_acadobjs(acadobjs)
         elif req.rtype == "elective":
-            elective_string += f"{min_max_to_str(req.min_req, req.max_req)} UOC courses from {req.rname}\n"
+            elective_string += (
+                f"{min_max_to_str(req.min_req, req.max_req)} UOC courses from {req.rname}\n"
+            )
             elective_string += "- " + req.acadobjs + "\n"
         elif req.rtype == "free":
             free_string += (
